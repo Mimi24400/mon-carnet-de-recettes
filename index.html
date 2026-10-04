@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f6b3b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<title>Mon Carnet de Recettes</title>
+<style>
+:root{--green:#2f6b3b;--green2:#5c8f61;--cream:#fffaf0;--paper:#fffdf8;--gold:#d9ad4c;--text:#2c2c2c;--muted:#777;--line:#eadfca;--pink:#e9898f}
+*{box-sizing:border-box}html,body{margin:0;background:var(--cream);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{min-height:100vh}button,input,textarea,select{font:inherit}
+header{position:sticky;top:0;z-index:20;background:linear-gradient(135deg,var(--green),#477e50);color:#fff;padding:15px 15px 13px;box-shadow:0 3px 14px #0002}
+.brand{display:flex;align-items:center;gap:10px}.logo{font-size:28px}h1{font-size:22px;margin:0}.tagline{font-size:12px;opacity:.9}
+.search{margin-top:11px;width:100%;border:0;border-radius:14px;padding:12px 14px;outline:none}
+nav{position:sticky;top:107px;z-index:19;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:7px;padding:9px 11px;overflow:auto}
+nav button,.chip{white-space:nowrap;border:1px solid #d5e1d5;background:#fff;color:var(--green);border-radius:999px;padding:8px 11px;font-weight:700}
+nav button.active{background:var(--green);color:#fff}
+main{max-width:980px;margin:auto;padding:15px 13px 90px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.count{font-size:13px;color:var(--muted)}.toolbar button{border:0;border-radius:12px;background:#eef5ee;color:var(--green);padding:9px 11px;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.card{background:var(--paper);border:1px solid #eee4d2;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px #00000012;position:relative}
+.card img{display:block;width:100%;height:auto;max-height:380px;object-fit:contain;background:#f7f0df}
+.card-body{padding:11px}.cat{font-size:10px;text-transform:uppercase;font-weight:900;color:var(--green);letter-spacing:.4px}
+.card h2{font-size:15px;line-height:1.22;margin:5px 0 9px}.season{font-size:11px;color:#7a6231;margin-bottom:8px}
+.actions{display:flex;gap:7px}.small{flex:1;border:0;border-radius:10px;padding:8px;background:#eef5ee;color:var(--green);font-weight:800}
+.fav{position:absolute;right:8px;top:8px;width:37px;height:37px;border:0;border-radius:50%;background:#fff;box-shadow:0 2px 8px #0003;font-size:20px;z-index:2}
+.fab{position:fixed;right:18px;bottom:18px;width:60px;height:60px;border:0;border-radius:50%;background:var(--green);color:#fff;font-size:31px;box-shadow:0 6px 18px #0004;z-index:25}
+.empty{text-align:center;color:var(--muted);padding:45px 15px}
+.footer{text-align:center;color:#888;font-size:11px;padding:20px}
+.modal{position:fixed;inset:0;background:#0008;display:none;z-index:50;align-items:flex-end}
+.modal.show{display:flex}.sheet{width:100%;max-height:94vh;overflow:auto;background:#fff;border-radius:22px 22px 0 0;padding:18px;box-shadow:0 -8px 30px #0004}
+.sheet h2{color:var(--green);margin:0 0 6px}.detail img{display:block;width:100%;height:auto;max-height:70vh;object-fit:contain;background:#f7f0df;border-radius:14px;margin:13px 0}
+.detail p{white-space:pre-wrap;line-height:1.55}label{display:block;font-weight:800;font-size:13px;margin:11px 0 5px}
+input,textarea,select{width:100%;border:1px solid #ddd;border-radius:11px;padding:11px;background:#fff}textarea{min-height:130px}
+.btnrow{display:flex;gap:8px;margin-top:14px}.primary,.secondary,.danger{flex:1;border:0;border-radius:12px;padding:12px;font-weight:900}
+.primary{background:var(--green);color:#fff}.secondary{background:#eee;color:#333}.danger{background:#f8dddd;color:#a33}
+.listrow{display:flex;gap:8px;align-items:center;border-bottom:1px solid #eee;padding:10px 0}.listrow input[type=checkbox]{width:auto}
+@media(min-width:700px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><div class="logo">📖</div><div><h1>Mon Carnet de Recettes</h1><div class="tagline">Les recettes illustrées ensemble ❤️</div></div></div>
+ <input id="search" class="search" placeholder="🔎 Rechercher une recette, un ingrédient..." oninput="render()">
+</header>
+<nav id="nav"></nav>
+<main>
+ <div class="toolbar"><span id="count" class="count"></span><button onclick="openTools()">⚙️ Outils</button></div>
+ <div id="grid" class="grid"></div>
+ <div class="footer">Ton carnet est personnel et fonctionne directement sur ton appareil. Pense à exporter une sauvegarde de temps en temps.</div>
+</main>
+<button class="fab" aria-label="Ajouter" onclick="openAdd()">＋</button>
+<div id="modal" class="modal" onclick="if(event.target===this)closeModal()"><div id="sheet" class="sheet"></div></div>
+
+<script>
+const STARTER=[{"id": "sauce-salade", "category": "Sauces & accompagnements", "title": "Sauce pour salade", "image": "assets/sauce-salade.png", "season": "Toute l’année", "notes": "Vinaigrette à la moutarde : 1 c. à s. de moutarde classique + 2 c. à s. de moutarde type Savora, 1 c. à s. de vinaigre de cidre, 3 c. à s. d’huile, 1 échalote, persil, sel et poivre. Variante sans Savora : remplacer par 3 c. à s. de moutarde à l’ancienne. Idéale aussi pour la salade d’endives."}, {"id": "champignons-farcis", "category": "Apéritifs", "title": "Champignons farcis pour l’apéro", "image": "assets/champignons-farcis.png", "season": "Automne & hiver", "notes": "400 g de champignons bruns frais ou champignons de Paris frais, une grosse boîte de Tartare ou Boursin ail et fines herbes, gruyère râpé, vin blanc sec, sel et poivre. Essuyer les champignons, retirer les queues, saler et poivrer, mettre un peu de gruyère au fond, une goutte de vin blanc, remplir aux 3/4 de fromage, remettre du gruyère, mouiller légèrement au vin blanc. Cuire à 220 °C jusqu’à ce que le fromage soit bien doré. Déguster chaud ou tiède."}, {"id": "kefir", "category": "Boissons", "title": "Kéfir maison", "image": "assets/kefir.png", "season": "Toute l’année", "notes": "Pour 1 litre : 30 g de kéfir, 30 g de sucre, 30 g de raisins secs bruns ou blonds, 1 litre d’eau, 2 rondelles de citron et 1 rondelle de gingembre frais partagée en 4. Dissoudre le sucre dans l’eau dans un bocal en verre, ajouter le kéfir, citron, gingembre et raisins, mélanger. Couvrir d’un linge propre ou Sopalin avec un élastique afin que le kéfir respire. Laisser fermenter 24 à 48 h, filtrer puis déguster."}, {"id": "jus", "category": "Jus", "title": "9 recettes de jus naturels – Santé & bien-être", "image": "assets/jus.png", "season": "Octobre à mars", "notes": "Un ensemble de 9 recettes de jus avec ingrédients, préparation, bienfaits et mois de disponibilité des fruits et légumes : immunité, énergie, hydratation, reins, digestion, intestin, yeux/peau, stress et circulation. Après une chirurgie bariatrique, les quantités, la texture et l’introduction des aliments doivent suivre les consignes de l’équipe médicale."}, {"id": "purees", "category": "Purées", "title": "10 purées de légumes de saison", "image": "assets/purees.png", "season": "Octobre à mars", "notes": "10 idées de purées : potimarron, carottes, panais, chou-fleur, brocoli, poireaux, céleri-rave, betterave, patate douce et courge butternut. Recettes pensées pour une texture très lisse et des légumes de saison d’octobre à mars ; adapter les quantités et la texture aux recommandations médicales après chirurgie bariatrique."}];
+let recipes=JSON.parse(localStorage.getItem('mcr_recipes')||'null')||STARTER;
+let favorites=JSON.parse(localStorage.getItem('mcr_favorites')||'[]');
+let shopping=JSON.parse(localStorage.getItem('mcr_shopping')||'[]');
+let category='Toutes';
+
+function save(){localStorage.setItem('mcr_recipes',JSON.stringify(recipes));localStorage.setItem('mcr_favorites',JSON.stringify(favorites));localStorage.setItem('mcr_shopping',JSON.stringify(shopping));}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function categories(){return ['Toutes',...new Set(recipes.map(r=>r.category)), '⭐ Favoris'];}
+function renderNav(){document.getElementById('nav').innerHTML=categories().map(c=>`<button class="${c===category?'active':''}" onclick="category=${JSON.stringify(c)};render()">${esc(c)}</button>`).join('');}
+function render(){
+ renderNav(); const q=(document.getElementById('search').value||'').toLowerCase().trim();
+ let arr=recipes.filter(r=>{let catOk=category==='Toutes'||(category==='⭐ Favoris'?favorites.includes(r.id):r.category===category);let qOk=!q||(r.title+' '+r.category+' '+r.notes).toLowerCase().includes(q);return catOk&&qOk;});
+ document.getElementById('count').textContent=arr.length+' recette'+(arr.length>1?'s':'');
+ document.getElementById('grid').innerHTML=arr.length?arr.map(r=>`<article class="card">
+ <button class="fav" onclick="toggleFav('${r.id}')">${favorites.includes(r.id)?'❤️':'♡'}</button>
+ <img src="${esc(r.image)}" alt="${esc(r.title)}" loading="lazy">
+ <div class="card-body"><div class="cat">${esc(r.category)}</div><h2>${esc(r.title)}</h2><div class="season">🌱 ${esc(r.season||'Saison à préciser')}</div>
+ <div class="actions"><button class="small" onclick="openDetail('${r.id}')">Ouvrir</button><button class="small" onclick="editRecipe('${r.id}')">Modifier</button></div></div></article>`).join(''):'<div class="empty">Aucune recette trouvée.<br><br>Appuie sur ＋ pour en ajouter une.</div>';
+}
+function toggleFav(id){favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];save();render();}
+function openDetail(id){const r=recipes.find(x=>x.id===id);document.getElementById('sheet').innerHTML=`<div class="detail"><div class="cat">${esc(r.category)}</div><h2>${esc(r.title)}</h2><div class="season">🌱 ${esc(r.season||'Saison à préciser')}</div><img src="${esc(r.image)}" alt=""><p>${esc(r.notes||'')}</p><div class="btnrow"><button class="secondary" onclick="closeModal()">Fermer</button><button class="primary" onclick="editRecipe('${r.id}')">✏️ Modifier</button></div></div>`;showModal();}
+function openAdd(){document.getElementById('sheet').innerHTML=`<h2>➕ Nouvelle recette</h2>
+<label>Nom</label><input id="aTitle" placeholder="Ex. Gratin de courge">
+<label>Catégorie</label><input id="aCat" placeholder="Ex. Plats">
+<label>Saison</label><input id="aSeason" placeholder="Ex. Octobre à mars">
+<label>Ingrédients & préparation</label><textarea id="aNotes" placeholder="Colle ou écris ta recette ici..."></textarea>
+<label>Illustration</label><input id="aImg" type="file" accept="image/*">
+<div class="btnrow"><button class="secondary" onclick="closeModal()">Annuler</button><button class="primary" onclick="addRecipe()">Ajouter</button></div>`;showModal();}
+function addRecipe(){let title=aTitle.value.trim();if(!title){alert('Donne un nom à la recette.');return}let obj={id:'r_'+Date.now(),title,category:aCat.value.trim()||'À classer',season:aSeason.value.trim()||'À préciser',notes:aNotes.value,image:''};let f=aImg.files[0];let done=()=>{recipes.unshift(obj);save();closeModal();render();};if(f){let fr=new FileReader();fr.onload=()=>{obj.image=fr.result;done()};fr.readAsDataURL(f)}else done();}
+function editRecipe(id){let r=recipes.find(x=>x.id===id);document.getElementById('sheet').innerHTML=`<h2>✏️ Modifier</h2>
+<label>Nom</label><input id="eTitle" value="${esc(r.title)}">
+<label>Catégorie</label><input id="eCat" value="${esc(r.category)}">
+<label>Saison</label><input id="eSeason" value="${esc(r.season||'')}">
+<label>Ingrédients & préparation</label><textarea id="eNotes">${esc(r.notes||'')}</textarea>
+<div class="btnrow"><button class="danger" onclick="deleteRecipe('${id}')">Supprimer</button><button class="primary" onclick="updateRecipe('${id}')">Enregistrer</button></div>`;showModal();}
+function updateRecipe(id){let r=recipes.find(x=>x.id===id);r.title=eTitle.value.trim()||r.title;r.category=eCat.value.trim()||'À classer';r.season=eSeason.value.trim()||'À préciser';r.notes=eNotes.value;save();closeModal();render();}
+function deleteRecipe(id){let r=recipes.find(x=>x.id===id);if(confirm('Supprimer « '+r.title+' » ?')){recipes=recipes.filter(x=>x.id!==id);favorites=favorites.filter(x=>x!==id);save();closeModal();render();}}
+function openTools(){document.getElementById('sheet').innerHTML=`<h2>⚙️ Outils</h2>
+<p>Tout est enregistré localement dans ce navigateur.</p>
+<div class="btnrow"><button class="primary" onclick="exportData()">💾 Sauvegarder</button><button class="secondary" onclick="document.getElementById('importFile').click()">📥 Restaurer</button></div>
+<input id="importFile" type="file" accept=".json" style="display:none" onchange="importData(this.files[0])">
+<h3>🛒 Ma liste de courses</h3><input id="shopText" placeholder="Ex. carottes, poireaux, œufs"><div class="btnrow"><button class="primary" onclick="addShop()">Ajouter</button><button class="secondary" onclick="clearShop()">Vider</button></div><div id="shopList"></div>
+<div class="btnrow"><button class="secondary" onclick="closeModal()">Fermer</button></div>`;showModal();renderShop();}
+function renderShop(){let el=document.getElementById('shopList');if(!el)return;el.innerHTML=shopping.map((x,i)=>`<div class="listrow"><input type="checkbox" ${x.done?'checked':''} onchange="shopping[${i}].done=this.checked;save()"><span style="flex:1;${x.done?'text-decoration:line-through;color:#999':''}">${esc(x.text)}</span><button class="secondary" onclick="shopping.splice(${i},1);save();renderShop()">×</button></div>`).join('')||'<div class="empty">Liste vide.</div>';}
+function addShop(){let v=shopText.value.trim();if(v){shopping.push({text:v,done:false});shopText.value='';save();renderShop();}}
+function clearShop(){if(confirm('Vider la liste ?')){shopping=[];save();renderShop();}}
+function exportData(){let blob=new Blob([JSON.stringify({recipes,favorites,shopping},null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mon-carnet-de-recettes-sauvegarde.json';a.click();URL.revokeObjectURL(a.href);}
+function importData(file){if(!file)return;let fr=new FileReader();fr.onload=()=>{try{let d=JSON.parse(fr.result);recipes=d.recipes||recipes;favorites=d.favorites||[];shopping=d.shopping||[];save();closeModal();render();alert('Sauvegarde restaurée !')}catch(e){alert('Fichier de sauvegarde invalide.')}};fr.readAsText(file);}
+function showModal(){document.getElementById('modal').classList.add('show')}function closeModal(){document.getElementById('modal').classList.remove('show')}
+render();
+</script>
+</body></html><script>if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js').catch(()=>{});}</script>
